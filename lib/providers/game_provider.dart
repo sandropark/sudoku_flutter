@@ -61,6 +61,10 @@ class GameProvider extends ChangeNotifier {
   int get remainingLives => _remainingLives;
   bool get isGameOver => _isGameOver;
 
+  // ===== 저장된 게임 유무 =====
+  bool _hasSavedGame = false;
+  bool get hasSavedGame => _hasSavedGame;
+
   // ===== 오답 추적 =====
   final Set<(int, int)> _wrongCells = {};
   bool isWrong(int row, int col) => _wrongCells.contains((row, col));
@@ -134,7 +138,7 @@ class GameProvider extends ChangeNotifier {
     elapsedSeconds = 0;
     _startTimer();
 
-    unawaited(_clearSavedGame());
+    unawaited(_saveGame());
     notifyListeners();
   }
 
@@ -158,6 +162,12 @@ class GameProvider extends ChangeNotifier {
   void _stopTimer() {
     _timer?.cancel();
     _timer = null;
+  }
+
+  // 타이머 재개 (홈 화면에서 게임 화면으로 이동 시 사용)
+  void resumeTimer() {
+    _stopTimer();
+    _startTimer();
   }
 
   // 스도쿠 보드판에서 특정 칸(row, col)을 터치했을 때 실행되는 함수
@@ -411,12 +421,14 @@ class GameProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_saveKey, jsonEncode(_toJson()));
+      _hasSavedGame = true;
     } catch (_) {
       // 저장 실패는 치명적이지 않으므로 무시
     }
   }
 
   Future<void> _clearSavedGame() async {
+    _hasSavedGame = false;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_saveKey);
   }
@@ -429,8 +441,7 @@ class GameProvider extends ChangeNotifier {
     try {
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
       _fromJson(json);
-      _stopTimer();
-      _startTimer();
+      _hasSavedGame = true;
       notifyListeners();
       return true;
     } catch (_) {

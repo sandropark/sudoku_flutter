@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // 상태 관리 패키지 추가
-import 'screens/board_screen.dart';
+import 'screens/home_screen.dart';
 import 'providers/game_provider.dart'; // 우리가 만든 앱 전용 두뇌 연결
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final gameProvider = GameProvider();
-  final loaded = await gameProvider.loadSavedGame();
-  if (!loaded) {
-    gameProvider.startNewGame();
-  }
+  await gameProvider.loadSavedGame();
 
   runApp(
     ChangeNotifierProvider.value(
@@ -33,8 +30,8 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.white,
       ),
-      // 시작 화면을 우리가 방금 만든 BoardScreen으로 지정합니다.
-      home: const BoardScreen(),
+      // 시작 화면을 홈 화면으로 지정합니다.
+      home: const HomeScreen(),
       debugShowCheckedModeBanner: false, // 우측 상단의 못생긴 'DEBUG' 띠를 없앱니다.
     );
   }
