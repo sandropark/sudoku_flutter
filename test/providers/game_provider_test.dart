@@ -1,11 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sudoku/providers/game_provider.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late GameProvider provider;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     provider = GameProvider();
+    provider.startNewGame();
   });
 
   tearDown(() {
@@ -561,6 +566,68 @@ void main() {
 
       expect(easyEmpty, 30);
       expect(hardEmpty, 50);
+    });
+  });
+
+  group('이어하기 (저장/복원)', () {
+    test('저장된 게임이 없으면 loadSavedGame이 false를 반환한다', () async {
+      final newProvider = GameProvider();
+      final loaded = await newProvider.loadSavedGame();
+      expect(loaded, false);
+      newProvider.dispose();
+    });
+
+    test('게임 진행 후 loadSavedGame으로 복원하면 상태가 유지된다', () async {
+      final pos = _findEmptyCell(provider);
+      provider.selectCell(pos.$1, pos.$2);
+      final correctNumber = _getSolutionNumber(provider, pos.$1, pos.$2);
+      provider.setInput(correctNumber);
+
+      // 저장이 완료될 때까지 대기
+      await Future<void>.delayed(Duration.zero);
+
+      final newProvider = GameProvider();
+      final loaded = await newProvider.loadSavedGame();
+      expect(loaded, true);
+      expect(newProvider.board[pos.$1][pos.$2], correctNumber);
+      expect(newProvider.difficulty, provider.difficulty);
+      expect(newProvider.remainingLives, provider.remainingLives);
+      newProvider.dispose();
+    });
+
+    test('startNewGame 후 저장된 게임이 삭제된다', () async {
+      final pos = _findEmptyCell(provider);
+      provider.selectCell(pos.$1, pos.$2);
+      final correctNumber = _getSolutionNumber(provider, pos.$1, pos.$2);
+      provider.setInput(correctNumber);
+      await Future<void>.delayed(Duration.zero);
+
+      provider.startNewGame();
+      await Future<void>.delayed(Duration.zero);
+
+      final newProvider = GameProvider();
+      final loaded = await newProvider.loadSavedGame();
+      expect(loaded, false);
+      newProvider.dispose();
+    });
+
+    test('게임 클리어 시 저장된 게임이 삭제된다', () async {
+      _fillAllCorrect(provider);
+      expect(provider.isGameClear, true);
+      await Future<void>.delayed(Duration.zero);
+
+      final newProvider = GameProvider();
+      final loaded = await newProvider.loadSavedGame();
+      expect(loaded, false);
+      newProvider.dispose();
+    });
+
+    test('손상된 JSON이 저장되어 있으면 loadSavedGame이 false를 반환한다', () async {
+      SharedPreferences.setMockInitialValues({'savedGame': 'invalid json'});
+      final newProvider = GameProvider();
+      final loaded = await newProvider.loadSavedGame();
+      expect(loaded, false);
+      newProvider.dispose();
     });
   });
 }

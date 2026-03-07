@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/sudoku_logic.dart';
 
 class _BoardMove {
@@ -11,13 +13,34 @@ class _BoardMove {
   final int removedMemoNumber; // 자동 제거된 메모 숫자
   _BoardMove(this.row, this.col, this.previousValue, this.previousMemos,
       {this.removedMemoCells = const [], this.removedMemoNumber = 0});
+
+  Map<String, dynamic> toJson() => {
+        'row': row,
+        'col': col,
+        'previousValue': previousValue,
+        'previousMemos': previousMemos.toList(),
+        'removedMemoCells':
+            removedMemoCells.map((e) => [e.$1, e.$2]).toList(),
+        'removedMemoNumber': removedMemoNumber,
+      };
+
+  static _BoardMove fromJson(Map<String, dynamic> json) => _BoardMove(
+        json['row'] as int,
+        json['col'] as int,
+        json['previousValue'] as int,
+        Set<int>.from(json['previousMemos'] as List),
+        removedMemoCells: (json['removedMemoCells'] as List)
+            .map((e) => (e[0] as int, e[1] as int))
+            .toList(),
+        removedMemoNumber: json['removedMemoNumber'] as int,
+      );
 }
 
 // Provider를 사용하기 위해 ChangeNotifier를 상속받습니다.
 // 이 클래스 안에서 데이터가 바뀌고 notifyListeners()를 부르면 화면이 알아서 다시 그려집니다.
 class GameProvider extends ChangeNotifier {
   late SudokuLogic _logic;
-  
+
   // ===== Undo 히스토리 =====
   final List<_BoardMove> _history = [];
   bool get canUndo => _history.isNotEmpty;
@@ -62,7 +85,6 @@ class GameProvider extends ChangeNotifier {
   GameProvider() {
     _logic = SudokuLogic();
     _memos = _createEmptyMemos();
-    startNewGame();
   }
 
   // 밖에서 보드판 데이터(`_logic.board`)를 읽어갈 수 있게 해주는 '보여주기용' 변수입니다.
@@ -112,6 +134,7 @@ class GameProvider extends ChangeNotifier {
     elapsedSeconds = 0;
     _startTimer();
 
+    unawaited(_clearSavedGame());
     notifyListeners();
   }
 
@@ -169,6 +192,7 @@ class GameProvider extends ChangeNotifier {
         _memos[row][col].add(number);
       }
       notifyListeners();
+      unawaited(_saveGame());
       return;
     }
 
@@ -182,6 +206,7 @@ class GameProvider extends ChangeNotifier {
       _logic.board[row][col] = 0;
       _wrongCells.remove((row, col));
       notifyListeners();
+      unawaited(_saveGame());
       return;
     }
 
@@ -212,6 +237,7 @@ class GameProvider extends ChangeNotifier {
     }
 
     notifyListeners();
+    unawaited(_saveGame());
   }
 
   // 사용자가 하단 키패드에서 '지우기' 버튼을 눌렀을 때 실행되는 함수
@@ -235,6 +261,7 @@ class GameProvider extends ChangeNotifier {
     _memos[row][col].clear();
     _wrongCells.remove((row, col));
     notifyListeners();
+    unawaited(_saveGame());
   }
 
   // Undo: 마지막 입력/지우기 동작을 되돌린다
@@ -260,6 +287,7 @@ class GameProvider extends ChangeNotifier {
     selectedRow = move.row;
     selectedCol = move.col;
     notifyListeners();
+    unawaited(_saveGame());
   }
 
   // 같은 줄, 같은 열, 같은 3x3 블록의 메모에서 해당 숫자를 제거하고, 제거된 셀 목록 반환
@@ -313,6 +341,102 @@ class GameProvider extends ChangeNotifier {
     }
 
     notifyListeners();
+    unawaited(_saveGame());
+  }
+
+  // ===== 이어하기 (저장/복원) =====
+
+  static const _saveKey = 'savedGame';
+
+  Map<String, dynamic> _toJson() => {
+        'difficulty': difficulty,
+        'board': _logic.board,
+        'solutionBoard': _logic.solutionBoard,
+        'isFixedBoard': _logic.isFixedBoard,
+        'memos': _memos
+            .map((row) => row.map((cell) => cell.toList()).toList())
+            .toList(),
+        'wrongCells': _wrongCells.map((e) => [e.$1, e.$2]).toList(),
+        'history': _history.map((m) => m.toJson()).toList(),
+        'selectedRow': selectedRow,
+        'selectedCol': selectedCol,
+        'elapsedSeconds': elapsedSeconds,
+        'remainingLives': _remainingLives,
+      };
+
+  void _fromJson(Map<String, dynamic> json) {
+    difficulty = json['difficulty'] as String;
+
+    _logic.board = (json['board'] as List)
+        .map((row) => (row as List).map((e) => e as int).toList())
+        .toList();
+    _logic.solutionBoard = (json['solutionBoard'] as List)
+        .map((row) => (row as List).map((e) => e as int).toList())
+        .toList();
+    _logic.isFixedBoard = (json['isFixedBoard'] as List)
+        .map((row) => (row as List).map((e) => e as bool).toList())
+        .toList();
+
+    _memos = (json['memos'] as List)
+        .map((row) => (row as List)
+            .map((cell) => Set<int>.from(cell as List))
+            .toList())
+        .toList();
+
+    _wrongCells.clear();
+    for (final cell in json['wrongCells'] as List) {
+      _wrongCells.add((cell[0] as int, cell[1] as int));
+    }
+
+    _history.clear();
+    for (final move in json['history'] as List) {
+      _history.add(_BoardMove.fromJson(move as Map<String, dynamic>));
+    }
+
+    selectedRow = json['selectedRow'] as int?;
+    selectedCol = json['selectedCol'] as int?;
+    elapsedSeconds = json['elapsedSeconds'] as int;
+    _remainingLives = json['remainingLives'] as int;
+
+    _isGameOver = _remainingLives <= 0;
+    isGameClear = _logic.isSolved();
+    isMemoMode = false;
+  }
+
+  Future<void> _saveGame() async {
+    if (isGameClear || _isGameOver) {
+      await _clearSavedGame();
+      return;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_saveKey, jsonEncode(_toJson()));
+    } catch (_) {
+      // 저장 실패는 치명적이지 않으므로 무시
+    }
+  }
+
+  Future<void> _clearSavedGame() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_saveKey);
+  }
+
+  Future<bool> loadSavedGame() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = prefs.getString(_saveKey);
+    if (jsonString == null) return false;
+
+    try {
+      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      _fromJson(json);
+      _stopTimer();
+      _startTimer();
+      notifyListeners();
+      return true;
+    } catch (_) {
+      await _clearSavedGame();
+      return false;
+    }
   }
 
   // Provider가 더 이상 필요 없어질 때(앱 종료 등) 타이머를 정리합니다.

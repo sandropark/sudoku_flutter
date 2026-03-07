@@ -3,12 +3,18 @@ import 'package:provider/provider.dart'; // 상태 관리 패키지 추가
 import 'screens/board_screen.dart';
 import 'providers/game_provider.dart'; // 우리가 만든 앱 전용 두뇌 연결
 
-void main() {
-  // 앱이 시작될 때 'GameProvider(게임 두뇌)'를 앱 전체에 덮어씌워서 실행합니다!
-  // 이제 앱 안의 어떤 화면이나 버튼에서도 이 두뇌에 접근해서 질문하거나 정보를 바꿀 수 있습니다.
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final gameProvider = GameProvider();
+  final loaded = await gameProvider.loadSavedGame();
+  if (!loaded) {
+    gameProvider.startNewGame();
+  }
+
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => GameProvider(),
+    ChangeNotifierProvider.value(
+      value: gameProvider,
       child: const MyApp(),
     ),
   );
