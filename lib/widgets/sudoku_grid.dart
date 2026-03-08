@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // 상태 관리 패키지 추가
-import '../providers/game_provider.dart'; // 우리가 만든 두뇌 연결
+import 'package:provider/provider.dart';
+import '../providers/game_provider.dart';
 
 class SudokuGrid extends StatelessWidget {
   const SudokuGrid({super.key});
@@ -23,7 +23,9 @@ class SudokuGrid extends StatelessWidget {
                 return Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isHighlighted ? Colors.yellow.shade100 : null,
+                      color: isHighlighted
+                          ? const Color(0xFFE8F5E9)
+                          : null,
                       borderRadius: BorderRadius.circular(2),
                     ),
                     child: Center(
@@ -31,8 +33,12 @@ class SudokuGrid extends StatelessWidget {
                         memos.contains(num) ? num.toString() : '',
                         style: TextStyle(
                           fontSize: 11.5,
-                          color: isHighlighted ? Colors.blue.shade700 : Colors.grey.shade700,
-                          fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+                          color: isHighlighted
+                              ? const Color(0xFF2E7D32)
+                              : Colors.grey.shade700,
+                          fontWeight: isHighlighted
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           height: 1.0,
                         ),
                       ),
@@ -49,110 +55,167 @@ class SudokuGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Consumer 위젯으로 감싸면, GameProvider(두뇌)에서 "화면 새로고침해줘!"라고 할 때마다 
-    // 여기 있는 UI들만 싹 다 최신 데이터로 다시 예쁘게 그려줍니다.
     return Consumer<GameProvider>(
       builder: (context, provider, child) {
         return AspectRatio(
           aspectRatio: 1.0,
           child: Container(
-            margin: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.blue.shade900, width: 2.0),
+              color: const Color(0xFFD0D5DD),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
+            clipBehavior: Clip.antiAlias,
             child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(), // 스크롤 방지
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 9, // 가로로 9칸
+                crossAxisCount: 9,
               ),
-              itemCount: 81, // 총 9x9 = 81칸
+              itemCount: 81,
               itemBuilder: (context, index) {
                 final row = index ~/ 9;
                 final col = index % 9;
-                
-                // 3x3 박스 구분을 위해 테두리 두께 조절 (주니어 필수 꿀팁!)
-                final topBorder = row % 3 == 0 ? 2.0 : 0.5;
-                final leftBorder = col % 3 == 0 ? 2.0 : 0.5;
 
-                // 두뇌(Provider)에서 현재 칸에 들어갈 숫자를 물어옵니다.
                 final number = provider.board[row][col];
-                
-                // 지금 그리고 있는 칸이, 사용자가 선택한 칸인지 확인합니다.
-                final isSelected = provider.selectedRow == row && provider.selectedCol == col;
-
-                // 추가된 기능: 초기 고정된 숫자인지 확인
+                final isSelected = provider.selectedRow == row &&
+                    provider.selectedCol == col;
                 final isFixed = provider.isFixed(row, col);
                 final isWrong = provider.isWrong(row, col);
 
-                // 추가된 기능: 현재 선택된 칸의 숫자와 같은 숫자인지 (0 제외)
-                final selectedNumber = (provider.selectedRow != null && provider.selectedCol != null)
-                    ? provider.board[provider.selectedRow!][provider.selectedCol!]
-                    : 0;
-                final isSameNumber = number != 0 && selectedNumber == number;
+                final selectedNumber =
+                    (provider.selectedRow != null &&
+                            provider.selectedCol != null)
+                        ? provider
+                            .board[provider.selectedRow!][provider.selectedCol!]
+                        : 0;
+                final isSameNumber =
+                    number != 0 && selectedNumber == number && !isSelected;
 
-
-                // 추가된 기능: 선택된 칸과 같은 줄(가로/세로/3x3)에 있는지 확인
                 bool isRelated = false;
-                if (provider.selectedRow != null && provider.selectedCol != null) {
+                if (provider.selectedRow != null &&
+                    provider.selectedCol != null) {
                   final sRow = provider.selectedRow!;
                   final sCol = provider.selectedCol!;
-                  
                   if (sRow == row || sCol == col) {
-                    isRelated = true; // 같은 가로/세로줄
+                    isRelated = true;
                   } else {
-                    int boxStartRow = (sRow ~/ 3) * 3;
-                    int boxStartCol = (sCol ~/ 3) * 3;
-                    if (row >= boxStartRow && row < boxStartRow + 3 &&
-                        col >= boxStartCol && col < boxStartCol + 3) {
-                      isRelated = true; // 같은 3x3 박스
+                    final boxStartRow = (sRow ~/ 3) * 3;
+                    final boxStartCol = (sCol ~/ 3) * 3;
+                    if (row >= boxStartRow &&
+                        row < boxStartRow + 3 &&
+                        col >= boxStartCol &&
+                        col < boxStartCol + 3) {
+                      isRelated = true;
                     }
                   }
                 }
 
-                // 하이라이트 배경색 우선순위 적용
-                Color bgColor = Colors.white;
+                // 3x3 블록 배경색 교차
+                final boxRow = row ~/ 3;
+                final boxCol = col ~/ 3;
+                final isAltBox = (boxRow + boxCol) % 2 == 0;
+
+                // 배경색 우선순위
+                Color bgColor =
+                    isAltBox ? const Color(0xFFF6F8FC) : Colors.white;
                 if (isSelected) {
-                  bgColor = Colors.blue.shade200; // 가장 진한 파란색
+                  bgColor = const Color(0xFFD4E4FF);
                 } else if (isWrong) {
-                  bgColor = Colors.red.shade50; // 오답 배경
+                  bgColor = const Color(0xFFFFF0F0);
                 } else if (isSameNumber) {
-                  bgColor = Colors.yellow.shade100; // 파스텔 노란색
+                  bgColor = const Color(0xFFE8F5E9);
                 } else if (isRelated) {
-                  bgColor = Colors.blue.shade50; // 연한 파란색
+                  bgColor = isAltBox
+                      ? const Color(0xFFE8EDF7)
+                      : const Color(0xFFEEF2FB);
                 }
 
-                // InkWell 위젯을 쓰면 터치했을 때 물결 효과가 나고 이벤트를 받을 수 있습니다.
+                // 테두리 정의
+                const defaultBorder =
+                    BorderSide(color: Color(0xFFD0D5DD), width: 0.5);
+                const blockBorder =
+                    BorderSide(color: Color(0xFFA0AEC0), width: 2);
+                const selectedBorder =
+                    BorderSide(color: Color(0xFF4A6FA5), width: 2);
+                const wrongBorder =
+                    BorderSide(color: Color(0xFFEF9A9A), width: 2);
+
+                final isBlockRight = col % 3 == 2 && col < 8;
+                final isBlockBottom = row % 3 == 2 && row < 8;
+
+                BorderSide topSide = defaultBorder;
+                BorderSide leftSide = defaultBorder;
+                BorderSide rightSide =
+                    isBlockRight ? blockBorder : defaultBorder;
+                BorderSide bottomSide =
+                    isBlockBottom ? blockBorder : defaultBorder;
+
+                // 선택/오답 셀은 borderRadius와 호환되도록 4면 모두 동일 테두리 적용
+                // (혼합 테두리 + borderRadius → Flutter 렌더링 실패)
+                if (isSelected) {
+                  topSide = selectedBorder;
+                  leftSide = selectedBorder;
+                  rightSide = selectedBorder;
+                  bottomSide = selectedBorder;
+                } else if (isWrong) {
+                  topSide = wrongBorder;
+                  leftSide = wrongBorder;
+                  rightSide = wrongBorder;
+                  bottomSide = wrongBorder;
+                }
+
+                final cellBorder = Border(
+                  top: topSide,
+                  left: leftSide,
+                  right: rightSide,
+                  bottom: bottomSide,
+                );
+
+                // 텍스트 색상
+                Color textColor;
+                if (isFixed) {
+                  textColor = const Color(0xFF1A1A2E);
+                } else if (isWrong) {
+                  textColor = const Color(0xFFD32F2F);
+                } else if (isSameNumber) {
+                  textColor = const Color(0xFF2E7D32);
+                } else if (isSelected) {
+                  textColor = const Color(0xFF1A3A6A);
+                } else {
+                  textColor = const Color(0xFF4A6FA5);
+                }
+
                 return InkWell(
-                  onTap: () {
-                    // 터치하면 두뇌(Provider)에게 "나 이 칸 선택했어!" 라고 알려줍니다.
-                    provider.selectCell(row, col);
-                  },
+                  onTap: () => provider.selectCell(row, col),
                   child: Container(
                     decoration: BoxDecoration(
                       color: bgColor,
-                      border: Border(
-                        top: BorderSide(color: Colors.blue.shade900, width: topBorder),
-                        left: BorderSide(color: Colors.blue.shade900, width: leftBorder),
-                        right: BorderSide(color: Colors.blue.shade900, width: 0.5),
-                        bottom: BorderSide(color: Colors.blue.shade900, width: 0.5),
-                      ),
+                      border: cellBorder,
+                      borderRadius:
+                          (isSelected || isWrong)
+                              ? BorderRadius.circular(4)
+                              : null,
                     ),
                     alignment: Alignment.center,
-                    // 숫자가 있으면 큰 숫자, 없고 메모가 있으면 3x3 미니 격자, 둘 다 없으면 빈칸
                     child: number != 0
                         ? Text(
                             number.toString(),
                             style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: isFixed ? FontWeight.w900 : FontWeight.w500,
-                              color: isFixed
-                                  ? Colors.black87
-                                  : isWrong
-                                      ? Colors.red.shade700
-                                      : Colors.blue.shade700,
+                              fontSize: 19,
+                              fontWeight:
+                                  isFixed ? FontWeight.w700 : FontWeight.w500,
+                              color: textColor,
                             ),
                           )
-                        : _buildMemoGrid(provider.getMemos(row, col), highlightNumber: selectedNumber),
+                        : _buildMemoGrid(provider.getMemos(row, col),
+                            highlightNumber: selectedNumber),
                   ),
                 );
               },

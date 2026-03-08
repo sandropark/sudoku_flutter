@@ -1,10 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:provider/provider.dart'; // 상태 관리 패키지 추가
 import 'screens/home_screen.dart';
 import 'providers/game_provider.dart'; // 우리가 만든 앱 전용 두뇌 연결
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (!kIsWeb) {
+    await MobileAds.instance.initialize();
+  }
 
   final gameProvider = GameProvider();
   await gameProvider.loadSavedGame();

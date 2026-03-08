@@ -153,6 +153,7 @@ class GameProvider extends ChangeNotifier {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!isGameClear) {
         elapsedSeconds++;
+        if (elapsedSeconds % 5 == 0) unawaited(_saveGame());
         notifyListeners(); // 매 초마다 화면에 시간이 업데이트됩니다.
       }
     });
@@ -315,6 +316,21 @@ class GameProvider extends ChangeNotifier {
       }
     }
     return removed;
+  }
+
+  // 진행률: 빈칸 중 채워진 비율 (0.0 ~ 1.0)
+  double get progress {
+    int filled = 0;
+    int total = 0;
+    for (int r = 0; r < 9; r++) {
+      for (int c = 0; c < 9; c++) {
+        if (!_logic.isFixedBoard[r][c]) {
+          total++;
+          if (_logic.board[r][c] != 0) filled++;
+        }
+      }
+    }
+    return total == 0 ? 1.0 : filled / total;
   }
 
   // 보드판 전체에서 특정 숫자(1~9)가 몇 개나 들어가 있는지 세는 함수
