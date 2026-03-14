@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:provider/provider.dart';
 import '../providers/game_provider.dart';
+import '../theme/pixel_theme.dart';
 import '../widgets/sudoku_grid.dart';
 import '../widgets/number_pad.dart';
 
@@ -89,7 +90,6 @@ class _BoardScreenState extends State<BoardScreen> {
     if (!provider.canUseHint()) return;
 
     if (_rewardedAd == null) {
-      // 광고가 아직 로드되지 않았으면 바로 힌트 제공
       provider.useHint();
       _loadRewardedAd();
       return;
@@ -99,14 +99,14 @@ class _BoardScreenState extends State<BoardScreen> {
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         _rewardedAd = null;
-        _loadRewardedAd(); // 다음 광고 미리 로드
+        _loadRewardedAd();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         debugPrint('Rewarded ad failed to show: ${error.message}');
         ad.dispose();
         _rewardedAd = null;
         _loadRewardedAd();
-        provider.useHint(); // 광고 실패 시에도 힌트 제공
+        provider.useHint();
       },
     );
 
@@ -139,54 +139,38 @@ class _BoardScreenState extends State<BoardScreen> {
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xFFFAFBFE),
+          backgroundColor: PixelColors.scaffoldBg,
           body: SafeArea(
             child: Column(
               children: [
                 // 상태바: 난이도, 하트, 타이머, 새게임
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // 난이도 칩
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0F1F5),
-                          borderRadius: BorderRadius.circular(20),
+                            horizontal: 12, vertical: 5),
+                        decoration: pixelBoxDecoration(
+                          color: PixelColors.gridBorderDark,
+                          borderColor: PixelColors.pixelBlack,
+                          borderWidth: 2,
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             value: provider.difficulty,
                             isDense: true,
                             icon: const SizedBox.shrink(),
+                            dropdownColor: PixelColors.gridBorderDark,
                             items:
                                 ['쉬움', '보통', '어려움'].map((String value) {
                               return DropdownMenuItem<String>(
                                 value: value,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF4ECDC4),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      value,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF555555),
-                                      ),
-                                    ),
-                                  ],
+                                child: Text(
+                                  value,
+                                  style: PixelTextStyles.chip,
                                 ),
                               );
                             }).toList(),
@@ -198,20 +182,28 @@ class _BoardScreenState extends State<BoardScreen> {
                           ),
                         ),
                       ),
-                      // 하트
+                      // 하트 (픽셀 스타일)
                       Row(
                         children: List.generate(3, (index) {
                           final isFilled = index < provider.remainingLives;
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: Icon(
-                              isFilled
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
-                              color: isFilled
-                                  ? Colors.red
-                                  : Colors.red.withValues(alpha: 0.25),
-                              size: 20,
+                            child: Text(
+                              isFilled ? '♥' : '♡',
+                              style: PixelTextStyles.base(
+                                fontSize: 20,
+                                color: isFilled
+                                    ? PixelColors.cellWrong
+                                    : PixelColors.cellWrongBg,
+                              ).copyWith(
+                                shadows: [
+                                  Shadow(
+                                    color: PixelColors.pixelBlack
+                                        .withValues(alpha: isFilled ? 0.6 : 0.2),
+                                    offset: const Offset(1, 1),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         }),
@@ -219,48 +211,37 @@ class _BoardScreenState extends State<BoardScreen> {
                       // 타이머
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0F1F5),
-                          borderRadius: BorderRadius.circular(20),
+                            horizontal: 12, vertical: 5),
+                        decoration: pixelBoxDecoration(
+                          color: PixelColors.gridBorderDark,
+                          borderColor: PixelColors.pixelBlack,
+                          borderWidth: 2,
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.timer_outlined,
-                                size: 14, color: Color(0xFF888888)),
-                            const SizedBox(width: 6),
-                            Text(
-                              provider.timerText,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF333333),
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          provider.timerText,
+                          style: PixelTextStyles.timer,
                         ),
                       ),
                       // 새 게임 버튼
-                      InkWell(
+                      GestureDetector(
                         onTap: () => provider.startNewGame(),
-                        borderRadius: BorderRadius.circular(10),
                         child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0F1F5),
-                            borderRadius: BorderRadius.circular(10),
+                          width: 34,
+                          height: 34,
+                          decoration: pixelBoxDecoration(
+                            color: PixelColors.gridBorderDark,
+                            borderColor: PixelColors.pixelBlack,
+                            borderWidth: 2,
                           ),
                           child: const Icon(Icons.refresh,
-                              size: 18, color: Color(0xFF666666)),
+                              size: 16, color: Colors.white),
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                // 그리드 + 컨트롤 (함께 중앙 정렬)
+                // 그리드 + 컨트롤
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -302,40 +283,49 @@ class _BoardScreenState extends State<BoardScreen> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            '게임 오버',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          ),
-          content: const Text(
-            '라이프를 모두 소진했습니다.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18),
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4A6FA5),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                  provider.startNewGame();
-                },
-                child: const Text('새 게임 시작',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
+        return Dialog(
+          shape: const RoundedRectangleBorder(),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: pixelBoxDecoration(
+              color: PixelColors.cellBackgroundAlt,
+              borderColor: PixelColors.gridBorderDark,
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '게임 오버',
+                  style: PixelTextStyles.base(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: PixelColors.cellWrong,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '라이프를 모두 소진했습니다.',
+                  style: PixelTextStyles.base(fontSize: 16),
+                ),
+                const SizedBox(height: 24),
+                PixelButton(
+                  color: PixelColors.gridBorderDark,
+                  onTap: () {
+                    Navigator.of(dialogContext).pop();
+                    provider.startNewGame();
+                  },
+                  child: Text(
+                    '새 게임 시작',
+                    style: PixelTextStyles.base(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -346,63 +336,65 @@ class _BoardScreenState extends State<BoardScreen> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            '🎉 축하합니다!',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                '스도쿠를 완성했습니다!',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '소요 시간: ${provider.timerText}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF4A6FA5),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                '난이도: ${provider.difficulty}',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4A6FA5),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                  provider.startNewGame();
-                },
-                child: const Text('새 게임 시작',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
+        return Dialog(
+          shape: const RoundedRectangleBorder(),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: pixelBoxDecoration(
+              color: PixelColors.cellBackgroundAlt,
+              borderColor: PixelColors.gridBorderDark,
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '축하합니다!',
+                  style: PixelTextStyles.base(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: PixelColors.numberFixed,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '스도쿠를 완성했습니다!',
+                  style: PixelTextStyles.base(fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '소요 시간: ${provider.timerText}',
+                  style: PixelTextStyles.base(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: PixelColors.gridBorderDark,
+                  ),
+                ),
+                Text(
+                  '난이도: ${provider.difficulty}',
+                  style: PixelTextStyles.base(
+                    fontSize: 16,
+                    color: PixelColors.gridBorderLight,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                PixelButton(
+                  color: PixelColors.gridBorderDark,
+                  onTap: () {
+                    Navigator.of(dialogContext).pop();
+                    provider.startNewGame();
+                  },
+                  child: Text(
+                    '새 게임 시작',
+                    style: PixelTextStyles.base(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );

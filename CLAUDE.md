@@ -23,9 +23,12 @@ Provider 패턴 기반의 단일 화면 Flutter 스도쿠 앱.
 ```
 lib/
 ├── main.dart                    # 앱 진입점, ChangeNotifierProvider로 GameProvider 주입
+├── theme/pixel_theme.dart       # 픽셀 아트 테마 (색상, 텍스트 스타일, 데코레이션, PixelButton)
 ├── providers/game_provider.dart # 게임 상태 관리 (ChangeNotifier)
 ├── utils/sudoku_logic.dart      # 순수 로직 (UI 무관, 보드 생성/검증)
-├── screens/board_screen.dart    # 메인 화면 (난이도 선택, 타이머, 그리드, 키패드 조합)
+├── screens/
+│   ├── home_screen.dart         # 홈 화면 (난이도 선택, 이어하기, 새 게임)
+│   └── board_screen.dart        # 메인 화면 (타이머, 그리드, 키패드 조합)
 └── widgets/
     ├── sudoku_grid.dart         # 9x9 보드 렌더링 + 셀 선택/하이라이트
     └── number_pad.dart          # 1-9 입력 버튼 + 액션 버튼(되돌리기/지우기/메모/힌트)
@@ -47,8 +50,15 @@ lib/
 ## Dependencies
 
 - `provider` (^6.1.5): 상태 관리
+- `google_fonts` (^6.2.1): DotGothic16 픽셀 폰트
 - `flutter_lints` (^6.0.0): 린트 규칙 (analysis_options.yaml에서 설정)
 - Dart SDK: ^3.11.1
+
+## UI 스타일
+
+- 8비트 픽셀 아트 테마 (DotGothic16 폰트, 직각 모서리, blur 0 그림자)
+- 색상/스타일은 `lib/theme/pixel_theme.dart`에 중앙 관리 (`PixelColors`, `PixelTextStyles`, `pixelBoxDecoration`)
+- 공용 `PixelButton` 위젯: 눌림 효과 (그림자 제거 + translate)
 
 ## 워크플로우
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/game_provider.dart';
+import '../theme/pixel_theme.dart';
 
 class NumberPad extends StatelessWidget {
   final VoidCallback? onHintTap;
@@ -14,7 +15,7 @@ class NumberPad extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Column(
             children: [
-              // 액션 버튼 (되돌리기, 지우기, 메모, 힌트)
+              // 액션 버튼
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -56,8 +57,11 @@ class NumberPad extends StatelessWidget {
                   return Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 3),
-                      child: _buildNumberButton(
-                          context, number, remaining, isDisabled),
+                      child: _PixelNumberButton(
+                        number: number,
+                        remaining: remaining,
+                        isDisabled: isDisabled,
+                      ),
                     ),
                   );
                 }),
@@ -66,56 +70,6 @@ class NumberPad extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildNumberButton(
-      BuildContext context, int number, int remaining, bool isDisabled) {
-    return InkWell(
-      onTap: isDisabled
-          ? null
-          : () => context.read<GameProvider>().setInput(number),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: isDisabled ? const Color(0xFFF5F5F5) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDisabled
-                ? const Color(0xFFEEEEEE)
-                : const Color(0xFFE0E3EA),
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              number.toString(),
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: isDisabled
-                    ? const Color(0xFFCCCCCC)
-                    : const Color(0xFF1A1A2E),
-                height: 1.0,
-              ),
-            ),
-            const SizedBox(height: 1),
-            Text(
-              remaining.toString(),
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                color: isDisabled
-                    ? const Color(0xFFDDDDDD)
-                    : const Color(0xFFAAAAAA),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -133,61 +87,57 @@ class NumberPad extends StatelessWidget {
     BoxBorder? border;
 
     if (isActive) {
-      bgColor = const Color(0xFFE0F2F1);
-      iconColor = const Color(0xFF00897B);
-      border = Border.all(color: const Color(0xFF4ECDC4), width: 2);
+      bgColor = PixelColors.memoActiveBg;
+      iconColor = PixelColors.memoActive;
+      border = Border.all(color: PixelColors.memoActive, width: 3);
     } else if (isHint) {
-      bgColor = const Color(0xFFFFF3E0);
-      iconColor = const Color(0xFFF57C00);
-      border = null;
+      bgColor = PixelColors.hintBg;
+      iconColor = PixelColors.accentOrange;
+      border = Border.all(color: PixelColors.accentOrange, width: 2);
     } else {
-      bgColor = const Color(0xFFF0F1F5);
-      iconColor = const Color(0xFF555555);
-      border = null;
+      bgColor = PixelColors.gridBorderDark.withValues(alpha: 0.3);
+      iconColor = Colors.white;
+      border = Border.all(color: PixelColors.gridBorderDark, width: 2);
     }
 
     return Opacity(
       opacity: isDisabled ? 0.4 : 1.0,
-      child: InkWell(
+      child: GestureDetector(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
         child: Column(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
                 color: bgColor,
-                borderRadius: BorderRadius.circular(14),
                 border: border,
+                boxShadow: pixelShadow(offset: const Offset(3, 3)),
               ),
               child: isHint
                   ? Stack(
                       alignment: Alignment.center,
                       clipBehavior: Clip.none,
                       children: [
-                        Icon(icon, color: iconColor, size: 20),
+                        Icon(icon, color: iconColor, size: 26),
                         Positioned(
                           right: -2,
                           bottom: -2,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 3, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF57C00),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Row(
+                            color: PixelColors.accentOrange,
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.ad_units,
+                                const Icon(Icons.ad_units,
                                     color: Colors.white, size: 8),
-                                SizedBox(width: 1),
+                                const SizedBox(width: 1),
                                 Text('AD',
-                                    style: TextStyle(
-                                      color: Colors.white,
+                                    style: PixelTextStyles.base(
                                       fontSize: 7,
                                       fontWeight: FontWeight.w700,
+                                      color: Colors.white,
                                     )),
                               ],
                             ),
@@ -195,15 +145,90 @@ class NumberPad extends StatelessWidget {
                         ),
                       ],
                     )
-                  : Icon(icon, color: iconColor, size: 20),
+                  : Icon(icon, color: iconColor, size: 26),
             ),
             const SizedBox(height: 4),
+            Text(label, style: PixelTextStyles.label),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 픽셀 스타일 숫자 버튼 (눌림 효과)
+class _PixelNumberButton extends StatefulWidget {
+  final int number;
+  final int remaining;
+  final bool isDisabled;
+
+  const _PixelNumberButton({
+    required this.number,
+    required this.remaining,
+    required this.isDisabled,
+  });
+
+  @override
+  State<_PixelNumberButton> createState() => _PixelNumberButtonState();
+}
+
+class _PixelNumberButtonState extends State<_PixelNumberButton> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: widget.isDisabled ? null : (_) => setState(() => _isPressed = true),
+      onTapUp: widget.isDisabled
+          ? null
+          : (_) {
+              setState(() => _isPressed = false);
+              context.read<GameProvider>().setInput(widget.number);
+            },
+      onTapCancel: widget.isDisabled ? null : () => setState(() => _isPressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 50),
+        height: 52,
+        transform: _isPressed
+            ? Matrix4.translationValues(2.0, 2.0, 0)
+            : Matrix4.identity(),
+        decoration: BoxDecoration(
+          color: widget.isDisabled
+              ? PixelColors.buttonDisabled
+              : PixelColors.cellBackground,
+          border: Border.all(
+            color: widget.isDisabled
+                ? PixelColors.buttonDisabled
+                : PixelColors.gridBorderDark,
+            width: 2,
+          ),
+          boxShadow: _isPressed || widget.isDisabled
+              ? null
+              : pixelShadow(offset: const Offset(2, 2)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
             Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
+              widget.number.toString(),
+              style: PixelTextStyles.base(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: widget.isDisabled
+                    ? PixelColors.gridBorderLight
+                    : PixelColors.numberFixed,
+                height: 1.0,
+              ),
+            ),
+            const SizedBox(height: 1),
+            Text(
+              widget.remaining.toString(),
+              style: PixelTextStyles.base(
+                fontSize: 9,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF888888),
+                color: widget.isDisabled
+                    ? PixelColors.gridBorderLight
+                    : PixelColors.gridBorderDark,
               ),
             ),
           ],
