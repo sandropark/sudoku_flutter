@@ -86,6 +86,8 @@ class _BoardScreenState extends State<BoardScreen> {
   }
 
   void _showRewardedAdForHint(GameProvider provider) {
+    if (!provider.canUseHint()) return;
+
     if (_rewardedAd == null) {
       // 광고가 아직 로드되지 않았으면 바로 힌트 제공
       provider.useHint();
@@ -135,8 +137,6 @@ class _BoardScreenState extends State<BoardScreen> {
             _showClearDialog(context, provider);
           });
         }
-
-        final progressPercent = (provider.progress * 100).round();
 
         return Scaffold(
           backgroundColor: const Color(0xFFFAFBFE),
@@ -255,37 +255,6 @@ class _BoardScreenState extends State<BoardScreen> {
                           child: const Icon(Icons.refresh,
                               size: 18, color: Color(0xFF666666)),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 진행률 바
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: provider.progress,
-                          minHeight: 4,
-                          backgroundColor: const Color(0xFFF0F1F5),
-                          valueColor:
-                              const AlwaysStoppedAnimation<Color>(Color(0xFF4ECDC4)),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('진행률',
-                              style: TextStyle(
-                                  fontSize: 11, color: Color(0xFF999999), fontWeight: FontWeight.w500)),
-                          Text('$progressPercent%',
-                              style: const TextStyle(
-                                  fontSize: 11, color: Color(0xFF999999), fontWeight: FontWeight.w500)),
-                        ],
                       ),
                     ],
                   ),

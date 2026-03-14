@@ -39,7 +39,7 @@ class NumberPad extends StatelessWidget {
                   const SizedBox(width: 12),
                   _buildActionButton(
                     icon: Icons.lightbulb_outline,
-                    label: '힌트',
+                    label: '힌트(AD)',
                     onTap: onHintTap ?? () => provider.useHint(),
                     isHint: true,
                   ),
@@ -161,7 +161,41 @@ class NumberPad extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 border: border,
               ),
-              child: Icon(icon, color: iconColor, size: 20),
+              child: isHint
+                  ? Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(icon, color: iconColor, size: 20),
+                        Positioned(
+                          right: -2,
+                          bottom: -2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 3, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF57C00),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.ad_units,
+                                    color: Colors.white, size: 8),
+                                SizedBox(width: 1),
+                                Text('AD',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 7,
+                                      fontWeight: FontWeight.w700,
+                                    )),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Icon(icon, color: iconColor, size: 20),
             ),
             const SizedBox(height: 4),
             Text(
