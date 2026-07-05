@@ -51,7 +51,9 @@ class GameProvider extends ChangeNotifier {
 
   // ===== 타이머 관련 변수 =====
   Timer? _timer; // Dart에서 제공하는 반복 실행 도구입니다.
-  int elapsedSeconds = 0; // 게임 시작 후 흐른 초(秒)
+  // 경과 시간(초). ValueNotifier라서 매초 갱신 시 타이머 텍스트만 리빌드되고
+  // 보드/키패드 전체는 리빌드되지 않는다.
+  final ValueNotifier<int> elapsed = ValueNotifier<int>(0);
   bool isGameClear = false; // 게임을 클리어했는지 여부
 
   // ===== Life 관련 변수 =====
@@ -102,8 +104,8 @@ class GameProvider extends ChangeNotifier {
 
   // 타이머에 표시할 시간을 "분:초" 형식으로 만들어주는 변환기
   String get timerText {
-    int minutes = elapsedSeconds ~/ 60;
-    int seconds = elapsedSeconds % 60;
+    int minutes = elapsed.value ~/ 60;
+    int seconds = elapsed.value % 60;
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
@@ -135,7 +137,7 @@ class GameProvider extends ChangeNotifier {
 
     // 타이머 초기화 및 재시작
     _stopTimer();
-    elapsedSeconds = 0;
+    elapsed.value = 0;
     _startTimer();
 
     unawaited(_saveGame());
@@ -148,13 +150,14 @@ class GameProvider extends ChangeNotifier {
     startNewGame();
   }
 
-  // 타이머 시작: 1초마다 elapsedSeconds를 1씩 올리고 화면을 새로고침합니다.
+  // 타이머 시작: 1초마다 elapsed(ValueNotifier)만 갱신합니다.
+  // notifyListeners()를 호출하지 않으므로 보드/키패드 전체가 매초 리빌드되지 않고,
+  // 타이머 텍스트(ValueListenableBuilder)만 갱신됩니다.
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!isGameClear) {
-        elapsedSeconds++;
-        if (elapsedSeconds % 5 == 0) unawaited(_saveGame());
-        notifyListeners(); // 매 초마다 화면에 시간이 업데이트됩니다.
+        elapsed.value++;
+        if (elapsed.value % 5 == 0) unawaited(_saveGame());
       }
     });
   }
@@ -324,7 +327,11 @@ class GameProvider extends ChangeNotifier {
     int count = 0;
     for (int i = 0; i < 9; i++) {
       for (int j = 0; j < 9; j++) {
-        if (_logic.board[i][j] == number) count++;
+        // 오답으로 놓인 칸은 세지 않는다. (정답 자리가 남았는데 버튼이
+        // 조기 비활성화되는 것을 방지)
+        if (_logic.board[i][j] == number && !_wrongCells.contains((i, j))) {
+          count++;
+        }
       }
     }
     return count;
@@ -376,7 +383,7 @@ class GameProvider extends ChangeNotifier {
         'history': _history.map((m) => m.toJson()).toList(),
         'selectedRow': selectedRow,
         'selectedCol': selectedCol,
-        'elapsedSeconds': elapsedSeconds,
+        'elapsedSeconds': elapsed.value,
         'remainingLives': _remainingLives,
       };
 
@@ -411,7 +418,7 @@ class GameProvider extends ChangeNotifier {
 
     selectedRow = json['selectedRow'] as int?;
     selectedCol = json['selectedCol'] as int?;
-    elapsedSeconds = json['elapsedSeconds'] as int;
+    elapsed.value = json['elapsedSeconds'] as int;
     _remainingLives = json['remainingLives'] as int;
 
     _isGameOver = _remainingLives <= 0;
@@ -460,6 +467,7 @@ class GameProvider extends ChangeNotifier {
   @override
   void dispose() {
     _stopTimer();
+    elapsed.dispose();
     super.dispose();
   }
 }

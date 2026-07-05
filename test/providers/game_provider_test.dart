@@ -7,10 +7,13 @@ void main() {
 
   late GameProvider provider;
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
     provider = GameProvider();
     provider.startNewGame();
+    // startNewGame의 fire-and-forget 저장(_saveGame)을 flush해서
+    // 이후 테스트가 pending write와 경합하지 않도록 결정론적으로 만든다.
+    await Future<void>.delayed(Duration.zero);
   });
 
   tearDown(() {
@@ -569,8 +572,37 @@ void main() {
     });
   });
 
+  group('numberCount', () {
+    test('오답으로 놓인 숫자는 카운트에서 제외된다', () {
+      final pos = _findEmptyCell(provider);
+      provider.selectCell(pos.$1, pos.$2);
+      final correct = _getSolutionNumber(provider, pos.$1, pos.$2);
+      final wrong = (correct % 9) + 1;
+
+      final before = provider.numberCount(wrong);
+      provider.setInput(wrong); // 오답 입력
+
+      expect(provider.isWrong(pos.$1, pos.$2), true);
+      expect(provider.numberCount(wrong), before); // 오답은 카운트에 반영되지 않음
+    });
+
+    test('정답으로 놓인 숫자는 카운트에 반영된다', () {
+      final pos = _findEmptyCell(provider);
+      provider.selectCell(pos.$1, pos.$2);
+      final correct = _getSolutionNumber(provider, pos.$1, pos.$2);
+
+      final before = provider.numberCount(correct);
+      provider.setInput(correct);
+
+      expect(provider.numberCount(correct), before + 1);
+    });
+  });
+
   group('이어하기 (저장/복원)', () {
     test('저장된 게임이 없으면 loadSavedGame이 false를 반환한다', () async {
+      // setUp이 저장해 둔 게임을 비워 '저장된 게임 없음' 상태를 만든다.
+      // (setUp에서 저장을 flush했으므로 pending write가 다시 오염시키지 않는다.)
+      SharedPreferences.setMockInitialValues({});
       final newProvider = GameProvider();
       final loaded = await newProvider.loadSavedGame();
       expect(loaded, false);
@@ -595,19 +627,24 @@ void main() {
       newProvider.dispose();
     });
 
-    test('startNewGame 후 저장된 게임이 삭제된다', () async {
+    test('startNewGame 후에는 이전 게임이 새 게임으로 대체 저장된다', () async {
+      // 기존 게임 진행 (오답으로 라이프를 깎아 상태를 구분 가능하게 만든다)
       final pos = _findEmptyCell(provider);
       provider.selectCell(pos.$1, pos.$2);
       final correctNumber = _getSolutionNumber(provider, pos.$1, pos.$2);
-      provider.setInput(correctNumber);
+      provider.setInput((correctNumber % 9) + 1); // 오답
+      expect(provider.remainingLives, 2);
       await Future<void>.delayed(Duration.zero);
 
+      // 새 게임 시작 → 새(초기화된) 게임이 즉시 저장됨
       provider.startNewGame();
       await Future<void>.delayed(Duration.zero);
 
       final newProvider = GameProvider();
       final loaded = await newProvider.loadSavedGame();
-      expect(loaded, false);
+      expect(loaded, true); // 새 게임이 저장되어 있다
+      expect(newProvider.remainingLives, 3); // 이전 진행이 아닌 초기화 상태
+      expect(newProvider.isGameOver, false);
       newProvider.dispose();
     });
 

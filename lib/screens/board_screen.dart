@@ -19,6 +19,7 @@ class _BoardScreenState extends State<BoardScreen> {
   bool _isBannerAdLoaded = false;
   RewardedAd? _rewardedAd;
   bool _isRewardedAdLoading = false;
+  bool _dialogShown = false; // 결과 다이얼로그 중복 표시 방지
 
   String get _bannerAdUnitId {
     // release 빌드에서만 운영 광고 사용. debug/profile은 테스트 광고로
@@ -136,14 +137,20 @@ class _BoardScreenState extends State<BoardScreen> {
   Widget build(BuildContext context) {
     return Consumer<GameProvider>(
       builder: (context, provider, child) {
-        if (provider.isGameOver) {
+        // 결과 다이얼로그는 최초 1회만 예약(매 rebuild마다 중복 push 방지).
+        // 새 게임 등으로 상태가 풀리면 플래그를 리셋한다.
+        if (provider.isGameOver && !_dialogShown) {
+          _dialogShown = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _showGameOverDialog(context, provider);
           });
-        } else if (provider.isGameClear) {
+        } else if (provider.isGameClear && !_dialogShown) {
+          _dialogShown = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _showClearDialog(context, provider);
           });
+        } else if (!provider.isGameOver && !provider.isGameClear) {
+          _dialogShown = false;
         }
 
         return Scaffold(
@@ -225,9 +232,13 @@ class _BoardScreenState extends State<BoardScreen> {
                           borderColor: PixelColors.pixelBlack,
                           borderWidth: 2,
                         ),
-                        child: Text(
-                          provider.timerText,
-                          style: PixelTextStyles.timer,
+                        // 타이머만 매초 리빌드(보드/키패드는 리빌드되지 않음)
+                        child: ValueListenableBuilder<int>(
+                          valueListenable: provider.elapsed,
+                          builder: (_, _, _) => Text(
+                            provider.timerText,
+                            style: PixelTextStyles.timer,
+                          ),
                         ),
                       ),
                       // 새 게임 버튼
