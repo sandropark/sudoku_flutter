@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class PixelColors {
   PixelColors._();
@@ -36,7 +35,8 @@ class PixelTextStyles {
     Color color = PixelColors.numberFixed,
     double? height,
   }) {
-    return GoogleFonts.dotGothic16(
+    return TextStyle(
+      fontFamily: 'DotGothic16',
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,

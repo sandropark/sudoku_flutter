@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
@@ -8,6 +9,13 @@ import 'theme/pixel_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 번들된 DotGothic16 폰트의 OFL 라이선스를 앱 라이선스 페이지에 등록(재배포 요건).
+  LicenseRegistry.addLicense(() async* {
+    final license = await rootBundle.loadString('fonts/OFL.txt');
+    yield LicenseEntryWithLineBreaks(['DotGothic16'], license);
+  });
+
   if (!kIsWeb) {
     await MobileAds.instance.initialize();
   }

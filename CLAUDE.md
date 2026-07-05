@@ -50,9 +50,11 @@ lib/
 ## Dependencies
 
 - `provider` (^6.1.5): 상태 관리
-- `google_fonts` (^6.2.1): DotGothic16 픽셀 폰트
+- `shared_preferences` (^2.5.3): 게임 저장/이어하기
+- `google_mobile_ads` (^7.0.0): 배너/보상형 광고
 - `flutter_lints` (^6.0.0): 린트 규칙 (analysis_options.yaml에서 설정)
 - Dart SDK: ^3.11.1
+- DotGothic16 폰트는 `fonts/`에 직접 번들링(네이티브 폰트 등록, 네트워크 fetch 없음). OFL 라이선스는 `fonts/OFL.txt`로 동봉하고 `main.dart`에서 `LicenseRegistry`에 등록
 
 ## UI 스타일
 
