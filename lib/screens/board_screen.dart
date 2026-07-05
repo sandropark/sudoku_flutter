@@ -21,19 +21,27 @@ class _BoardScreenState extends State<BoardScreen> {
   bool _isRewardedAdLoading = false;
 
   String get _bannerAdUnitId {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'ca-app-pub-3940256099942544/6300978111';
-    } else {
-      return 'ca-app-pub-3940256099942544/2934735716';
+    // release 빌드에서만 운영 광고 사용. debug/profile은 테스트 광고로
+    // AdMob 무효 트래픽(계정 정지) 방지.
+    if (!kReleaseMode) {
+      return defaultTargetPlatform == TargetPlatform.android
+          ? 'ca-app-pub-3940256099942544/6300978111'
+          : 'ca-app-pub-3940256099942544/2934735716';
     }
+    return defaultTargetPlatform == TargetPlatform.android
+        ? 'ca-app-pub-8495159868358935/7552298013'
+        : 'ca-app-pub-3940256099942544/2934735716';
   }
 
   String get _rewardedAdUnitId {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'ca-app-pub-3940256099942544/5224354917';
-    } else {
-      return 'ca-app-pub-3940256099942544/1712485313';
+    if (!kReleaseMode) {
+      return defaultTargetPlatform == TargetPlatform.android
+          ? 'ca-app-pub-3940256099942544/5224354917'
+          : 'ca-app-pub-3940256099942544/1712485313';
     }
+    return defaultTargetPlatform == TargetPlatform.android
+        ? 'ca-app-pub-8495159868358935/9945194501'
+        : 'ca-app-pub-3940256099942544/1712485313';
   }
 
   @override
